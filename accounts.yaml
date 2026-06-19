@@ -5,7 +5,7 @@ accounts:
     credentials_dir: credentials/camila
     notion_database_id: "3835505d-c341-818a-a88a-d2f87e4d0752"
     telegram_chat_id: "812086295"
-    whatsapp_phone: "REPLACE_WITH_YOUR_PHONE"  # format: country code + number, e.g. 5511999999999
+    whatsapp_phone: "5531987799435"
 
   # To add another account, uncomment and fill in:
   # - name: client2
