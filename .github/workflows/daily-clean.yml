@@ -1,0 +1,58 @@
+name: Daily Email Cleaner
+
+on:
+  schedule:
+    # 7 AM BRT (Brasilia = UTC-3) = 10 AM UTC
+    - cron: '0 10 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Run in dry-run mode (no changes, no notifications)'
+        type: boolean
+        default: false
+
+jobs:
+  clean-inbox:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Restore Gmail credentials
+        run: |
+          mkdir -p credentials/camila state logs
+          echo "${{ secrets.GMAIL_CREDENTIALS_CAMILA }}" | base64 -d > credentials/camila/credentials.json
+          echo "${{ secrets.GMAIL_TOKEN_CAMILA }}" | base64 -d > credentials/camila/token.json
+
+      - name: Run email cleaner
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          WHATSAPP_PHONE_NUMBER_ID: ${{ secrets.WHATSAPP_PHONE_NUMBER_ID }}
+          WHATSAPP_ACCESS_TOKEN: ${{ secrets.WHATSAPP_ACCESS_TOKEN }}
+        run: |
+          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
+            python3 main.py --dry-run
+          else
+            python3 main.py --notifier whatsapp
+          fi
+
+      - name: Update Gmail token secret (if refreshed)
+        if: success() || failure()
+        env:
+          GH_TOKEN: ${{ secrets.PAT_UPDATE_SECRETS }}
+        run: |
+          if [ -f credentials/camila/token.json ]; then
+            NEW_TOKEN=$(base64 -w 0 credentials/camila/token.json)
+            gh secret set GMAIL_TOKEN_CAMILA --body "$NEW_TOKEN" --repo "${{ github.repository }}"
+          fi

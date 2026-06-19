@@ -1,0 +1,17 @@
+# Secrets — never commit these
+.env
+credentials/*/token.json
+credentials/*/credentials.json
+
+# Runtime state — managed by the script, not version-controlled
+state/
+
+# Logs
+logs/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+*.egg-info/

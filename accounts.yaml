@@ -1,0 +1,20 @@
+accounts:
+  - name: camila
+    enabled: true
+    email: cacagrandini@gmail.com
+    credentials_dir: credentials/camila
+    notion_database_id: "3835505d-c341-818a-a88a-d2f87e4d0752"
+    telegram_chat_id: "812086295"
+    whatsapp_phone: "REPLACE_WITH_YOUR_PHONE"  # format: country code + number, e.g. 5511999999999
+
+  # To add another account, uncomment and fill in:
+  # - name: client2
+  #   enabled: true
+  #   email: client2@gmail.com
+  #   credentials_dir: credentials/client2
+  #   notion_database_id: "REPLACE_WITH_NOTION_DATABASE_ID"
+  #   telegram_chat_id: "REPLACE_WITH_TELEGRAM_CHAT_ID"
+  #   whatsapp_phone: "REPLACE_WITH_PHONE"
+
+shared:
+  default_lookback_hours: 24
