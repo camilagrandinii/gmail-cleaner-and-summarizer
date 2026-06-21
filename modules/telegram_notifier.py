@@ -53,12 +53,14 @@ def send_digest(
     chat_id: str,
     account_name: str,
     newsletter_labels: list[str] | None = None,
+    trashed_senders: list[str] | None = None,
 ):
     now = datetime.now(timezone.utc)
     date_str = now.strftime("%B %d, %Y")
     time_str = now.strftime("%H:%M")
     total = counts.get("total", 0)
     newsletter_labels = newsletter_labels or []
+    trashed_senders = trashed_senders or []
 
     safe_account = html.escape(account_name)
 
@@ -81,6 +83,18 @@ def send_digest(
 
     if newsletter_labels:
         lines.append(f"  📰 {_format_newsletter_labels(newsletter_labels)}")
+
+    if trashed_senders:
+        sender_counts: dict[str, int] = {}
+        for s in trashed_senders:
+            name = _sender_display(s)
+            sender_counts[name] = sender_counts.get(name, 0) + 1
+        parts = [f"{n} ({c})" if c > 1 else n for n, c in sender_counts.items()]
+        if len(parts) > 15:
+            extra = len(parts) - 15
+            parts = parts[:15] + [f"+{extra} others"]
+        lines += ["", f"🗑 <b>Trashed ({len(trashed_senders)}):</b>"]
+        lines += [f"  • {html.escape(p)}" for p in parts]
 
     if important_emails:
         lines += ["", "⭐ <b>Important Emails:</b>"]

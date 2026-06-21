@@ -97,6 +97,20 @@ JOB_KEYWORDS = [
     "processo seletivo", "recrutamento",
 ]
 
+# Keywords that indicate spam even when Gmail places the email in Primary (no category label).
+# These catch marketing/promotional emails that slipped past Gmail's categorisation.
+SPAM_IN_PRIMARY_KEYWORDS = [
+    "unsubscribe", "opt out", "opt-out", "email preferences", "marketing preferences",
+    "you are receiving this", "you're receiving this",
+    "limited time offer", "limited time only", "today only", "ends tonight", "expires soon",
+    "last chance", "don't miss out", "act now",
+    "exclusive offer", "special offer", "exclusive deal",
+    "you've been selected", "you have been selected", "you've won", "you were selected",
+    "claim your", "click here to claim", "claim now",
+    "você está recebendo", "cancelar inscrição", "descadastrar",
+    "oferta exclusiva", "oferta por tempo limitado", "ultima chance",
+]
+
 # Keywords that strongly indicate a coupon/promo code is present
 COUPON_KEYWORDS = [
     "coupon", "promo code", "promocode", "discount code", "use code", "enter code",
@@ -222,6 +236,12 @@ def classify_email(email: dict) -> dict:
                 },
             }
         logger.debug(f"Spam/promo: '{subject}'")
+        return {"category": "spam_promo", "coupon_data": null_coupon}
+
+    # Even without a promo label, trash it if the content looks like spam
+    combined_lower = f"{subject} {snippet}".lower()
+    if any(kw in combined_lower for kw in SPAM_IN_PRIMARY_KEYWORDS):
+        logger.debug(f"Spam-in-primary: '{subject}'")
         return {"category": "spam_promo", "coupon_data": null_coupon}
 
     logger.debug(f"Important: '{subject}'")

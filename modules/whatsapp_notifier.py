@@ -63,6 +63,19 @@ def _format_newsletter_labels(labels: list[str]) -> str:
     return " - ".join(parts)
 
 
+def _format_trashed_senders(senders: list[str]) -> str:
+    counts: dict[str, int] = {}
+    for s in senders:
+        name = _sender_display(s)
+        counts[name] = counts.get(name, 0) + 1
+    parts = [f"{name} ({n})" if n > 1 else name for name, n in counts.items()]
+    # Cap to 12 entries to stay within WhatsApp body limit
+    if len(parts) > 12:
+        extra = len(parts) - 12
+        parts = parts[:12] + [f"...+{extra} outros"]
+    return "\n".join(f"• {p}" for p in parts)
+
+
 def send_digest(
     phone_number_id: str,
     access_token: str,
@@ -72,12 +85,14 @@ def send_digest(
     counts: dict,
     account_name: str,
     newsletter_labels: list[str] | None = None,
+    trashed_senders: list[str] | None = None,
 ):
     now = datetime.now(timezone.utc)
     date_str = now.strftime("%d/%m/%Y")
     time_str = now.strftime("%H:%M")
     total = counts.get("total", 0)
     newsletter_labels = newsletter_labels or []
+    trashed_senders = trashed_senders or []
 
     if total == 0:
         body = f"Nenhum email novo desde a ultima execucao.\n\nExecutado as {time_str} UTC"
@@ -109,6 +124,10 @@ def send_digest(
         lines.append(f"• {job_offers} vagas rotuladas")
     if newsletter_labels:
         lines.append(f"  ({_format_newsletter_labels(newsletter_labels)})")
+
+    if trashed_senders:
+        lines.append(f"\nDescartados ({len(trashed_senders)}):")
+        lines.append(_format_trashed_senders(trashed_senders))
 
     if important_emails:
         lines.append("\nImportantes:")

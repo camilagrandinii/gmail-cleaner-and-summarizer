@@ -133,6 +133,7 @@ def process_account(account: AccountConfig, config, last_run: datetime, dry_run:
     counts = {"total": len(emails), "spam": 0, "coupons": 0, "important": 0, "newsletters": 0,
               "financial_newsletters": 0, "github_notifications": 0, "job_offers": 0, "concert_tickets": 0}
     important_emails = []
+    trashed_senders = []   # sender strings for every email moved to trash
     newsletter_labels = []  # list of label_name strings, one per newsletter email received
     dry_run_results = []
 
@@ -165,10 +166,12 @@ def process_account(account: AccountConfig, config, last_run: datetime, dry_run:
         else:
             if category == "spam_promo":
                 gmail.move_to_trash(email["id"])
+                trashed_senders.append(email["sender"])
                 counts["spam"] += 1
             elif category == "coupon":
                 notion_client.save_coupon(result["coupon_data"], account.notion_database_id)
                 gmail.move_to_trash(email["id"])
+                trashed_senders.append(email["sender"])
                 counts["coupons"] += 1
             elif category == "newsletter":
                 label_name = result["label_name"]
@@ -213,7 +216,8 @@ def process_account(account: AccountConfig, config, last_run: datetime, dry_run:
             f"{counts['concert_tickets']} concert tickets"
         )
 
-    return {"counts": counts, "important_emails": important_emails, "newsletter_labels": newsletter_labels}
+    return {"counts": counts, "important_emails": important_emails,
+            "newsletter_labels": newsletter_labels, "trashed_senders": trashed_senders}
 
 
 def _send_digest(notifier: str, account, config, result: dict):
@@ -229,6 +233,7 @@ def _send_digest(notifier: str, account, config, result: dict):
             recipient=account.whatsapp_phone,
             important_emails=result["important_emails"],
             newsletter_labels=result["newsletter_labels"],
+            trashed_senders=result["trashed_senders"],
             counts=result["counts"],
             account_name=account.name,
         )
@@ -236,6 +241,7 @@ def _send_digest(notifier: str, account, config, result: dict):
         telegram_notifier.send_digest(
             important_emails=result["important_emails"],
             newsletter_labels=result["newsletter_labels"],
+            trashed_senders=result["trashed_senders"],
             counts=result["counts"],
             chat_id=account.telegram_chat_id,
             account_name=account.name,
