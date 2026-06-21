@@ -1,6 +1,6 @@
 # Gmail Cleaner & Summarizer
 
-Automated Gmail inbox cleaner that runs every morning via **GitHub Actions** and delivers a WhatsApp digest using the **official Meta Cloud API**. No server required. Completely free.
+Automated Gmail inbox cleaner that runs every morning via **GitHub Actions** and delivers a **Telegram digest**. No server required. Completely free.
 
 ---
 
@@ -10,10 +10,10 @@ Automated Gmail inbox cleaner that runs every morning via **GitHub Actions** and
 - **Smart classification** — categorises every incoming email using Gmail's own labels (no AI API cost)
 - **Spam removal** — promotional and social emails are moved to Trash automatically
 - **Coupon extraction** — detects discount codes, saves them to a Notion database, then trashes the email
-- **Newsletter labelling** — newsletters, financial updates, GitHub notifications, and job offers get labelled and kept
-- **WhatsApp digest** — a daily summary of important emails lands in your WhatsApp via Meta's official API
+- **Newsletter labelling** — newsletters, financial updates, GitHub notifications, job offers, and concert tickets get labelled and kept
+- **Telegram digest** — a daily summary of important emails sent via Telegram Bot
 - **Multi-account** — add new Gmail accounts with a single config entry, no code changes
-- **Local mode** — run with `--dry-run` to preview actions, or `--notifier telegram` for the classic Telegram digest
+- **WhatsApp support** — send via Meta Cloud API instead with `--notifier whatsapp` (requires extra setup)
 
 ---
 
@@ -28,9 +28,9 @@ GitHub Actions (cron: 07:00 BRT)
         │         Classify via Gmail category labels
         │         Trash spam/promos
         │         Save coupons → Notion API
-        │         Label newsletters
+        │         Label newsletters / job offers / etc.
         ▼
-  WhatsApp (Meta Cloud API)
+  Telegram Bot API
         Send daily digest with important emails
 ```
 
@@ -38,12 +38,16 @@ GitHub Actions (cron: 07:00 BRT)
 
 Gmail automatically assigns category labels to every email. The classifier maps them to actions with no external API calls:
 
-| Gmail category | Action |
+| Gmail category / match | Action |
 |---|---|
 | `CATEGORY_PROMOTIONS`, `CATEGORY_SOCIAL`, `CATEGORY_FORUMS` | Move to Trash |
 | `CATEGORY_UPDATES` | Move to Trash |
 | Contains coupon keywords | Extract code → save to Notion → Trash |
 | Matches newsletter senders | Apply Gmail label, keep in inbox |
+| Matches financial newsletter senders | Apply label, keep in inbox, include in digest |
+| Matches GitHub notification senders | Apply label, keep in inbox, include in digest |
+| Matches job offer senders | Apply Gmail label, keep in inbox |
+| Matches concert/ticket senders | Apply Gmail label, keep in inbox |
 | No category (Primary tab) | Keep in inbox, include in digest |
 
 ---
@@ -53,15 +57,15 @@ Gmail automatically assigns category labels to every email. The classifier maps 
 ```
 main.py                      Entry point — orchestrates the per-account loop
 config.py                    Loads accounts.yaml + environment variables
-accounts.yaml                Per-account config (email, Notion DB, WhatsApp number)
+accounts.yaml                Per-account config (email, Notion DB, Telegram chat, WhatsApp number)
 backfill_labels.py           One-time utility to label existing inbox emails
 
 modules/
   gmail_client.py            OAuth2 auth, email fetching, trash, label management
   classifier.py              Rule-based email classification (no AI)
   notion_client.py           Saves coupon records to Notion
-  whatsapp_notifier.py       Sends digest via Meta WhatsApp Cloud API
-  telegram_notifier.py       Sends digest via Telegram Bot API (local/v1 mode)
+  telegram_notifier.py       Sends digest via Telegram Bot API (default)
+  whatsapp_notifier.py       Sends digest via Meta WhatsApp Cloud API (optional)
 
 credentials/{name}/
   credentials.json           GCP OAuth client secret (you provide, never committed)
@@ -78,15 +82,12 @@ logs/cleaner.log             Rotating daily log, 7-day retention
 
 ## Setup
 
-Full step-by-step instructions are in **[SETUP_V2.md](SETUP_V2.md)**.
-
 High-level checklist:
 
 - [ ] **Gmail API** — create a GCP project, enable Gmail API, download `credentials.json` as a Desktop App credential, and run the OAuth flow once locally
 - [ ] **Notion** — create an integration and a database with the required schema; link them
-- [ ] **Meta WhatsApp** — create a Meta Developer app, add WhatsApp, register your number as a test recipient, and create the `email_digest_daily` message template
-- [ ] **Permanent token** — generate a non-expiring System User token in Meta Business Manager
-- [ ] **GitHub repo** — push the project (respecting `.gitignore`) and add the six required secrets
+- [ ] **Telegram** — create a bot via [@BotFather](https://t.me/BotFather), get the bot token, and find your chat ID
+- [ ] **GitHub repo** — push the project (respecting `.gitignore`) and add the required secrets
 - [ ] **Test** — trigger the workflow manually with `dry_run = true`, then a real run
 
 ---
@@ -100,25 +101,8 @@ Configure these in **Settings → Secrets and variables → Actions**:
 | `GMAIL_CREDENTIALS_CAMILA` | `base64 -w 0 credentials/camila/credentials.json` |
 | `GMAIL_TOKEN_CAMILA` | `base64 -w 0 credentials/camila/token.json` |
 | `NOTION_TOKEN` | Notion internal integration token |
-| `WHATSAPP_PHONE_NUMBER_ID` | Meta sender Phone Number ID |
-| `WHATSAPP_ACCESS_TOKEN` | Meta System User permanent token |
+| `TELEGRAM_BOT_TOKEN` | Telegram bot token from @BotFather |
 | `PAT_UPDATE_SECRETS` | GitHub PAT (scope: `repo`) — lets the workflow refresh the Gmail token secret |
-
----
-
-## WhatsApp Message Template
-
-Create a template named exactly `email_digest_daily` in the Meta dashboard (category: **Utility**, language: **Portuguese Brazil**):
-
-```
-📧 Email Digest — {{1}}
-
-{{2}}
-
-Gerado automaticamente · Clean Email Inbox
-```
-
-`{{1}}` receives the date, `{{2}}` receives the digest body.
 
 ---
 
@@ -139,10 +123,10 @@ python3 main.py --dry-run
 # Preview a specific lookback window
 python3 main.py --dry-run --lookback-days 3
 
-# Run normally, sending the digest to Telegram (v1 mode)
+# Run normally, sending the digest via Telegram (default)
 python3 main.py --notifier telegram
 
-# Run normally, sending the digest to WhatsApp
+# Run normally, sending the digest via WhatsApp (requires Meta Cloud API setup)
 python3 main.py --notifier whatsapp
 
 # Backfill labels on all existing inbox emails (one-time utility)
@@ -177,12 +161,38 @@ Each coupon is saved as a page in a Notion database. The database must have exac
      credentials_dir: credentials/newaccount
      notion_database_id: "your_database_id"
      telegram_chat_id: "your_chat_id"
-     whatsapp_phone: "5511987654321"
+     whatsapp_phone: "5511987654321"   # optional, only needed for --notifier whatsapp
    ```
 3. Run `python3 main.py --dry-run` locally — a browser window opens for OAuth consent
 4. Add `GMAIL_CREDENTIALS_{NEWACCOUNT_UPPER}` and `GMAIL_TOKEN_{NEWACCOUNT_UPPER}` secrets to GitHub
-5. Add the new number as a test recipient in the Meta dashboard
-6. Update `.github/workflows/daily-clean.yml` to restore the new account's credentials
+5. Update `.github/workflows/daily-clean.yml` to restore the new account's credentials
+
+---
+
+## WhatsApp (optional)
+
+WhatsApp sending is implemented but not the active channel on GitHub Actions. To switch:
+
+1. Follow the Meta Cloud API setup in **[SETUP_V2.md](SETUP_V2.md)**
+2. Add `WHATSAPP_PHONE_NUMBER_ID` and `WHATSAPP_ACCESS_TOKEN` secrets to GitHub
+3. In `.github/workflows/daily-clean.yml`, change the env block and run command:
+   ```yaml
+   env:
+     NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+     WHATSAPP_PHONE_NUMBER_ID: ${{ secrets.WHATSAPP_PHONE_NUMBER_ID }}
+     WHATSAPP_ACCESS_TOKEN: ${{ secrets.WHATSAPP_ACCESS_TOKEN }}
+   run: python3 main.py --notifier whatsapp
+   ```
+
+The WhatsApp template must be named `email_digest_daily` (category: Utility, language: Portuguese Brazil):
+
+```
+📧 Email Digest — {{1}}
+
+{{2}}
+
+Gerado automaticamente · Clean Email Inbox
+```
 
 ---
 
@@ -190,7 +200,7 @@ Each coupon is saved as a page in a Notion database. The database must have exac
 
 - **Python 3.12**
 - **Gmail API** (google-api-python-client) — OAuth2, read + modify scope
-- **Meta WhatsApp Cloud API** — official Graph API, template messages
+- **Telegram Bot API** (requests) — daily digest, default notification channel
+- **Meta WhatsApp Cloud API** — optional notification channel via Graph API template messages
 - **Notion API** (notion-client) — coupon database
-- **Telegram Bot API** (requests) — optional local notification channel
 - **GitHub Actions** — free cloud scheduler, cron-based
