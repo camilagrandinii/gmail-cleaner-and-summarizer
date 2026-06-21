@@ -3,6 +3,8 @@
 credentials/*/token.json
 credentials/*/credentials.json
 
+.claude
+
 # Runtime state — managed by the script, not version-controlled
 state/
 

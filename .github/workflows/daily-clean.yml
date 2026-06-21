@@ -38,13 +38,12 @@ jobs:
       - name: Run email cleaner
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
-          WHATSAPP_PHONE_NUMBER_ID: ${{ secrets.WHATSAPP_PHONE_NUMBER_ID }}
-          WHATSAPP_ACCESS_TOKEN: ${{ secrets.WHATSAPP_ACCESS_TOKEN }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
         run: |
           if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
             python3 main.py --dry-run
           else
-            python3 main.py --notifier whatsapp
+            python3 main.py --notifier telegram
           fi
 
       - name: Update Gmail token secret (if refreshed)

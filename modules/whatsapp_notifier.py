@@ -12,6 +12,8 @@ MAX_BODY_LENGTH = 900
 
 def _send_template(phone_number_id: str, access_token: str, recipient: str, template_name: str, body_params: list[str]):
     """Send a WhatsApp template message via Meta Cloud API."""
+    # Template parameters forbid newlines/tabs — flatten multi-line content
+    body_params = [p.replace("\n", " | ").replace("\t", " ") for p in body_params]
     url = f"{GRAPH_API_URL}/{phone_number_id}/messages"
     payload = {
         "messaging_product": "whatsapp",
