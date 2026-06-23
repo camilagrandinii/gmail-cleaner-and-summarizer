@@ -62,6 +62,72 @@ CONCERT_TICKET_KEYWORDS = [
     "event confirmation",
 ]
 
+# Travel / flight / transport senders — matched as substrings of the lowercase From header.
+TRAVEL_SENDERS = [
+    # Booking systems / GDS
+    "amadeus.com",
+    # Airlines
+    "aireuropa.com", "aireuropanews.com",
+    "latam.com", "latamairlines.com",
+    "voeazul.com.br", "azul.com.br",
+    "voegol.com.br", "gol.com.br",
+    "ryanair.com",
+    "lufthansa.com",
+    "iberia.com",
+    "tap.pt",
+    "emirates.com",
+    "americanairlines.com",
+    "united.com",
+    "delta.com",
+    "klm.com",
+    "airfrance.com",
+    "britishairways.com",
+    "easyjet.com",
+    "vueling.com",
+    "transavia.com",
+    "wizz.com", "wizzair.com",
+    # Travel booking platforms
+    "booking.com",
+    "expedia.com",
+    "decolar.com",
+    "maxmilhas.com.br",
+    "hurb.com",
+    "submarinoviagens.com.br",
+    # Bus / ground transport
+    "clickbus.com.br",
+    "buser.com.br",
+    "flixbus.com", "flixbus.com.br",
+    "busbud.com",
+    "redbus.in",
+    # Hotels / accommodation
+    "airbnb.com",
+    "marriott.com",
+    "hilton.com",
+    "ihg.com",
+]
+
+# Keywords that indicate a travel booking or itinerary email
+TRAVEL_KEYWORDS = [
+    # Booking confirmations (EN/ES/PT)
+    "booking confirmation", "flight confirmation", "reservation confirmation",
+    "confirmación de compra", "confirmación de reserva", "confirmación de tu reserva",
+    "confirmação de reserva", "confirmação da reserva", "confirmação de compra",
+    # Locators / reference codes
+    "localizador", "booking reference", "reservation number", "confirmation code",
+    "pnr", "record locator",
+    # Boarding / itinerary
+    "boarding pass", "cartão de embarque", "tarjeta de embarque",
+    "online check-in", "check-in online",
+    "itinerary", "itinerario", "itinerário",
+    # Transport keywords (standalone subject phrases)
+    "seu voo", "your flight", "tu vuelo",
+    "flight details", "detalles del vuelo",
+    "reserva de hotel", "hotel reservation", "hotel booking",
+    # Bus / ground
+    "sua passagem", "tu pasaje",
+    "comprovante de passagem",
+]
+
 # Gmail label colors (must be from Gmail's allowed palette).
 LABEL_COLORS = {
     "The News":        {"backgroundColor": "#fb4c2f", "textColor": "#ffffff"},
@@ -82,6 +148,7 @@ LABEL_COLORS = {
     "InfoMoney":       {"backgroundColor": "#149e60", "textColor": "#ffffff"},
     "AUVP Capital":    {"backgroundColor": "#0b804b", "textColor": "#ffffff"},
     "GitHub":          {"backgroundColor": "#666666", "textColor": "#ffffff"},
+    "Travel":          {"backgroundColor": "#1155cc", "textColor": "#ffffff"},
 }
 DEFAULT_LABEL_COLOR = {"backgroundColor": "#cccccc", "textColor": "#000000"}
 
@@ -181,6 +248,13 @@ def _is_concert_ticket(sender: str, subject: str, snippet: str) -> bool:
     return any(kw in text for kw in CONCERT_TICKET_KEYWORDS)
 
 
+def _is_travel_email(sender: str, subject: str, snippet: str) -> bool:
+    if any(p in sender for p in TRAVEL_SENDERS):
+        return True
+    text = f"{subject} {snippet}".lower()
+    return any(kw in text for kw in TRAVEL_KEYWORDS)
+
+
 def classify_email(email: dict) -> dict:
     label_ids = set(email.get("label_ids", []))
     subject = email.get("subject", "")
@@ -206,6 +280,11 @@ def classify_email(email: dict) -> dict:
         if pattern in sender_lower:
             logger.debug(f"Newsletter ({label_name}): '{subject}'")
             return {"category": "newsletter", "label_name": label_name}
+
+    # Travel bookings (flights, buses, hotels) — label and keep, never trash
+    if _is_travel_email(sender_lower, subject, snippet):
+        logger.debug(f"Travel: '{subject}'")
+        return {"category": "travel", "label_name": "Travel"}
 
     # Concert/event tickets — label and keep, never trash, skip Telegram
     if _is_concert_ticket(sender_lower, subject, snippet):

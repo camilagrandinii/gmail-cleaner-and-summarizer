@@ -26,6 +26,7 @@ CATEGORY_LABEL = {
     "github_notification": "LABEL + KEEP + DIGEST",
     "job_offer": "LABEL + KEEP",
     "concert_ticket": "LABEL + KEEP",
+    "travel": "LABEL + KEEP",
 }
 
 
@@ -81,7 +82,8 @@ def print_dry_run_report(account: AccountConfig, emails: list[dict], results: li
     print(sep)
 
     counts = {"spam_promo": 0, "coupon": 0, "important": 0, "newsletter": 0,
-              "financial_newsletter": 0, "github_notification": 0, "job_offer": 0, "concert_ticket": 0}
+              "financial_newsletter": 0, "github_notification": 0, "job_offer": 0,
+              "concert_ticket": 0, "travel": 0}
 
     for email, result in zip(emails, results):
         cat = result["category"]
@@ -93,7 +95,7 @@ def print_dry_run_report(account: AccountConfig, emails: list[dict], results: li
         icon = {
             "spam_promo": "🗑 ", "coupon": "🏷 ", "important": "⭐",
             "newsletter": "📰", "financial_newsletter": "💰", "github_notification": "🐙",
-            "job_offer": "💼", "concert_ticket": "🎟 ",
+            "job_offer": "💼", "concert_ticket": "🎟 ", "travel": "✈ ",
         }[cat]
         print(f"\n{icon} [{action}]")
         print(f"   Subject : {subject}")
@@ -104,7 +106,7 @@ def print_dry_run_report(account: AccountConfig, emails: list[dict], results: li
             cd = result["coupon_data"]
             print(f"   Code    : {cd.get('code') or '(not extracted)'}")
             print(f"   Discount: {cd.get('discount_description') or '(not extracted)'}")
-        elif cat in ("newsletter", "concert_ticket", "financial_newsletter", "github_notification"):
+        elif cat in ("newsletter", "concert_ticket", "travel", "financial_newsletter", "github_notification"):
             print(f"   Tag     : {result.get('label_name', '')}")
 
     print(f"\n{sep}")
@@ -118,6 +120,7 @@ def print_dry_run_report(account: AccountConfig, emails: list[dict], results: li
     print(f"  🐙  GitHub notifs       → would be LABELED+KEPT+DIGEST: {counts['github_notification']}")
     print(f"  💼  Job offers          → would be LABELED+KEPT       : {counts['job_offer']}")
     print(f"  🎟  Concert tickets     → would be LABELED+KEPT       : {counts['concert_ticket']}")
+    print(f"  ✈   Travel bookings    → would be LABELED+KEPT       : {counts['travel']}")
     print(sep)
     print("  No changes were made. Run without --dry-run to apply.")
     print(f"{sep}\n")
@@ -131,7 +134,8 @@ def process_account(account: AccountConfig, config, last_run: datetime, dry_run:
     emails = gmail.fetch_emails_since(last_run)
 
     counts = {"total": len(emails), "spam": 0, "coupons": 0, "important": 0, "newsletters": 0,
-              "financial_newsletters": 0, "github_notifications": 0, "job_offers": 0, "concert_tickets": 0}
+              "financial_newsletters": 0, "github_notifications": 0, "job_offers": 0,
+              "concert_tickets": 0, "travel": 0}
     important_emails = []
     trashed_senders = []   # sender strings for every email moved to trash
     newsletter_labels = []  # list of label_name strings, one per newsletter email received
@@ -160,6 +164,8 @@ def process_account(account: AccountConfig, config, last_run: datetime, dry_run:
                 counts["job_offers"] += 1
             elif category == "concert_ticket":
                 counts["concert_tickets"] += 1
+            elif category == "travel":
+                counts["travel"] += 1
             else:
                 important_emails.append(email)
                 counts["important"] += 1
@@ -201,6 +207,12 @@ def process_account(account: AccountConfig, config, last_run: datetime, dry_run:
                 label_id = gmail.ensure_label(label_name, color)
                 gmail.apply_label(email["id"], label_id)
                 counts["concert_tickets"] += 1
+            elif category == "travel":
+                label_name = result["label_name"]
+                color = LABEL_COLORS["Travel"]
+                label_id = gmail.ensure_label(label_name, color)
+                gmail.apply_label(email["id"], label_id)
+                counts["travel"] += 1
             else:
                 important_emails.append(email)
                 counts["important"] += 1
@@ -213,7 +225,7 @@ def process_account(account: AccountConfig, config, last_run: datetime, dry_run:
             f"{counts['coupons']} coupons | {counts['important']} important | "
             f"{counts['newsletters']} newsletters | {counts['financial_newsletters']} fin.newsletters | "
             f"{counts['github_notifications']} github | {counts['job_offers']} job offers | "
-            f"{counts['concert_tickets']} concert tickets"
+            f"{counts['concert_tickets']} concert tickets | {counts['travel']} travel"
         )
 
     return {"counts": counts, "important_emails": important_emails,
