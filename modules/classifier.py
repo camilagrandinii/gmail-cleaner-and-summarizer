@@ -148,7 +148,7 @@ LABEL_COLORS = {
     "InfoMoney":       {"backgroundColor": "#149e60", "textColor": "#ffffff"},
     "AUVP Capital":    {"backgroundColor": "#0b804b", "textColor": "#ffffff"},
     "GitHub":          {"backgroundColor": "#666666", "textColor": "#ffffff"},
-    "Travel":          {"backgroundColor": "#1155cc", "textColor": "#ffffff"},
+    "Travel":          {"backgroundColor": "#4a86e8", "textColor": "#ffffff"},
 }
 DEFAULT_LABEL_COLOR = {"backgroundColor": "#cccccc", "textColor": "#000000"}
 

@@ -122,5 +122,5 @@ def send_digest(
 
 
 def send_error_alert(error_message: str, chat_id: str, account_name: str):
-    text = f"🚨 <b>Email cleaner failed</b> ({account_name})\n\n{error_message}\n\nCheck logs/cleaner.log"
+    text = f"🚨 <b>Email cleaner failed</b> ({account_name})\n\n{html.escape(error_message)}\n\nCheck logs/cleaner.log"
     _send(chat_id, text)
