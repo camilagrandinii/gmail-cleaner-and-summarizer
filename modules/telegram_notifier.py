@@ -103,7 +103,7 @@ def send_digest(
         for email in newsletter_emails:
             subj = email["subject"][:70]
             label = email.get("label_name", "")
-            snippet = email.get("snippet", "").strip()[:150]
+            snippet = " ".join(email.get("snippet", "").split())[:150]
             tag = f"[{html.escape(label)}] " if label else ""
             lines.append(f'• {tag}"{html.escape(subj)}"')
             if snippet:
@@ -115,7 +115,7 @@ def send_digest(
             subj = email["subject"][:70]
             sender_name = _sender_display(email["sender"])
             label = email.get("label_name", "")
-            snippet = email.get("snippet", "").strip()[:150]
+            snippet = " ".join(email.get("snippet", "").split())[:150]
             label_tag = f" [{html.escape(label)}]" if label else ""
             lines.append(f'• <b>{html.escape(sender_name)}</b>{label_tag} — "{html.escape(subj)}"')
             if snippet:
