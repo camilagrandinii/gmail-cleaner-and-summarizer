@@ -87,6 +87,7 @@ def send_digest(
     counts: dict,
     account_name: str,
     newsletter_labels: list[str] | None = None,
+    newsletter_emails: list[dict] | None = None,
     trashed_senders: list[str] | None = None,
 ):
     now = datetime.now(timezone.utc)
@@ -94,6 +95,7 @@ def send_digest(
     time_str = now.strftime("%H:%M")
     total = counts.get("total", 0)
     newsletter_labels = newsletter_labels or []
+    newsletter_emails = newsletter_emails or []
     trashed_senders = trashed_senders or []
 
     if total == 0:
@@ -131,13 +133,26 @@ def send_digest(
         lines.append(f"\nDescartados ({len(trashed_senders)}):")
         lines.append(_format_trashed_senders(trashed_senders))
 
+    if newsletter_emails:
+        lines.append("\nNewsletters:")
+        for email in newsletter_emails:
+            subj = email["subject"][:55]
+            label = email.get("label_name", "")
+            snippet = email.get("snippet", "").strip()[:80]
+            tag = f"[{label}] " if label else ""
+            lines.append(f"• {tag}{subj}")
+            if snippet:
+                lines.append(f"  {snippet}...")
+
     if important_emails:
         lines.append("\nImportantes:")
         for email in important_emails:
-            subj = email["subject"][:60]
+            subj = email["subject"][:55]
             sender_name = _sender_display(email["sender"])
+            label = email.get("label_name", "")
             snippet = email.get("snippet", "").strip()[:80]
-            lines.append(f"• {sender_name}: {subj}")
+            label_tag = f" [{label}]" if label else ""
+            lines.append(f"• {sender_name}{label_tag}: {subj}")
             if snippet:
                 lines.append(f"  {snippet}...")
     else:

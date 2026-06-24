@@ -137,8 +137,9 @@ def process_account(account: AccountConfig, config, last_run: datetime, dry_run:
               "financial_newsletters": 0, "github_notifications": 0, "job_offers": 0,
               "concert_tickets": 0, "travel": 0}
     important_emails = []
-    trashed_senders = []   # sender strings for every email moved to trash
-    newsletter_labels = []  # list of label_name strings, one per newsletter email received
+    newsletter_emails = []  # newsletter emails with label_name, for digest detail section
+    trashed_senders = []    # sender strings for every email moved to trash
+    newsletter_labels = []  # label_name strings, one per newsletter (for summary count line)
     dry_run_results = []
 
     for email in emails:
@@ -152,7 +153,9 @@ def process_account(account: AccountConfig, config, last_run: datetime, dry_run:
             elif category == "coupon":
                 counts["coupons"] += 1
             elif category == "newsletter":
-                newsletter_labels.append(result["label_name"])
+                label_name = result["label_name"]
+                newsletter_labels.append(label_name)
+                newsletter_emails.append({**email, "label_name": label_name})
                 counts["newsletters"] += 1
             elif category == "financial_newsletter":
                 important_emails.append(email)
@@ -185,33 +188,38 @@ def process_account(account: AccountConfig, config, last_run: datetime, dry_run:
                 label_id = gmail.ensure_label(label_name, color)
                 gmail.apply_label(email["id"], label_id)
                 newsletter_labels.append(label_name)
+                newsletter_emails.append({**email, "label_name": label_name})
                 counts["newsletters"] += 1
             elif category in ("financial_newsletter", "github_notification"):
                 label_name = result["label_name"]
                 color = LABEL_COLORS.get(label_name, DEFAULT_LABEL_COLOR)
                 label_id = gmail.ensure_label(label_name, color)
                 gmail.apply_label(email["id"], label_id)
-                important_emails.append(email)
+                important_emails.append({**email, "label_name": label_name})
                 if category == "financial_newsletter":
                     counts["financial_newsletters"] += 1
                 else:
                     counts["github_notifications"] += 1
             elif category == "job_offer":
-                color = LABEL_COLORS["Job Offers"]
-                label_id = gmail.ensure_label("Job Offers", color)
+                label_name = "Job Offers"
+                color = LABEL_COLORS[label_name]
+                label_id = gmail.ensure_label(label_name, color)
                 gmail.apply_label(email["id"], label_id)
+                important_emails.append({**email, "label_name": label_name})
                 counts["job_offers"] += 1
             elif category == "concert_ticket":
                 label_name = result["label_name"]
                 color = LABEL_COLORS["Concert Tickets"]
                 label_id = gmail.ensure_label(label_name, color)
                 gmail.apply_label(email["id"], label_id)
+                important_emails.append({**email, "label_name": label_name})
                 counts["concert_tickets"] += 1
             elif category == "travel":
                 label_name = result["label_name"]
                 color = LABEL_COLORS["Travel"]
                 label_id = gmail.ensure_label(label_name, color)
                 gmail.apply_label(email["id"], label_id)
+                important_emails.append({**email, "label_name": label_name})
                 counts["travel"] += 1
             else:
                 important_emails.append(email)
@@ -229,7 +237,8 @@ def process_account(account: AccountConfig, config, last_run: datetime, dry_run:
         )
 
     return {"counts": counts, "important_emails": important_emails,
-            "newsletter_labels": newsletter_labels, "trashed_senders": trashed_senders}
+            "newsletter_emails": newsletter_emails, "newsletter_labels": newsletter_labels,
+            "trashed_senders": trashed_senders}
 
 
 def _send_digest(notifier: str, account, config, result: dict):
@@ -244,6 +253,7 @@ def _send_digest(notifier: str, account, config, result: dict):
             template_name=config.whatsapp_template_name,
             recipient=account.whatsapp_phone,
             important_emails=result["important_emails"],
+            newsletter_emails=result["newsletter_emails"],
             newsletter_labels=result["newsletter_labels"],
             trashed_senders=result["trashed_senders"],
             counts=result["counts"],
@@ -252,6 +262,7 @@ def _send_digest(notifier: str, account, config, result: dict):
     else:
         telegram_notifier.send_digest(
             important_emails=result["important_emails"],
+            newsletter_emails=result["newsletter_emails"],
             newsletter_labels=result["newsletter_labels"],
             trashed_senders=result["trashed_senders"],
             counts=result["counts"],

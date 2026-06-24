@@ -53,6 +53,7 @@ def send_digest(
     chat_id: str,
     account_name: str,
     newsletter_labels: list[str] | None = None,
+    newsletter_emails: list[dict] | None = None,
     trashed_senders: list[str] | None = None,
 ):
     now = datetime.now(timezone.utc)
@@ -60,6 +61,7 @@ def send_digest(
     time_str = now.strftime("%H:%M")
     total = counts.get("total", 0)
     newsletter_labels = newsletter_labels or []
+    newsletter_emails = newsletter_emails or []
     trashed_senders = trashed_senders or []
 
     safe_account = html.escape(account_name)
@@ -96,13 +98,26 @@ def send_digest(
         lines += ["", f"🗑 <b>Trashed ({len(trashed_senders)}):</b>"]
         lines += [f"  • {html.escape(p)}" for p in parts]
 
+    if newsletter_emails:
+        lines += ["", "📰 <b>Newsletters:</b>"]
+        for email in newsletter_emails:
+            subj = email["subject"][:70]
+            label = email.get("label_name", "")
+            snippet = email.get("snippet", "").strip()[:150]
+            tag = f"[{html.escape(label)}] " if label else ""
+            lines.append(f'• {tag}"{html.escape(subj)}"')
+            if snippet:
+                lines.append(f'  <i>{html.escape(snippet)}…</i>')
+
     if important_emails:
         lines += ["", "⭐ <b>Important Emails:</b>"]
         for email in important_emails:
             subj = email["subject"][:70]
             sender_name = _sender_display(email["sender"])
+            label = email.get("label_name", "")
             snippet = email.get("snippet", "").strip()[:150]
-            lines.append(f'• <b>{html.escape(sender_name)}</b> — "{html.escape(subj)}"')
+            label_tag = f" [{html.escape(label)}]" if label else ""
+            lines.append(f'• <b>{html.escape(sender_name)}</b>{label_tag} — "{html.escape(subj)}"')
             if snippet:
                 lines.append(f'  <i>{html.escape(snippet)}…</i>')
     else:

@@ -28,12 +28,14 @@ NEWSLETTER_SENDERS = [
     ("aisolo@mail.beehiiv.com", "AI Solo"),
     ("notice@email.anthropic.com", "Anthropic"),
     ("contatobiz@cesar.school", "CESAR School"),
+    ("pdescoladedanca@gmail.com", "Escola de Dança"),
 ]
 
 # Financial/investment newsletter senders — kept, labeled, AND included in the Telegram daily digest.
 FINANCIAL_NEWSLETTER_SENDERS = [
     ("relacionamento@info.infomoney.com.br", "InfoMoney"),
     ("naoresponda@auvpcapital.com.br", "AUVP Capital"),
+    ("naoresponda@auvp.com.br", "AUVP Capital"),
 ]
 
 # GitHub notification senders — kept, labeled, and included in the Telegram daily digest.
@@ -149,6 +151,7 @@ LABEL_COLORS = {
     "AUVP Capital":    {"backgroundColor": "#0b804b", "textColor": "#ffffff"},
     "GitHub":          {"backgroundColor": "#666666", "textColor": "#ffffff"},
     "Travel":          {"backgroundColor": "#4a86e8", "textColor": "#ffffff"},
+    "Escola de Dança": {"backgroundColor": "#e07798", "textColor": "#ffffff"},
 }
 DEFAULT_LABEL_COLOR = {"backgroundColor": "#cccccc", "textColor": "#000000"}
 
